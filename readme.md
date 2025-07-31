@@ -37,6 +37,30 @@ go run main.go
 
 ![概览](./img/出题系统概览.png)
 
+### 后端项目结构
+
+```
+questionSystem/server/
+├── api/
+│ └── handler.go // 存放所有API的处理器函数 (handlers)
+│ └── middleware.go // 存放错误处理等中间件
+├── config/
+│ └── config.go // 负责读取和管理配置 (例如 .env 文件)
+├── model/
+│ └── model.go // 存放所有的数据结构定义 (structs)
+├── router/
+│ └── router.go // 负责设置所有 Gin 路由
+├── service/
+│ └── ai_service.go // 存放与AI服务交互的业务逻辑
+├── store/
+│ └── db.go // 存放所有数据库操作相关的代码
+├── .env
+├── go.mod
+├── go.sum
+├── main.go // 主入口文件，负责初始化和启动服务
+└── questionSystem.db
+```
+
 ### 后端接口
 
 端口：localhost:8080
