@@ -33,9 +33,17 @@ go run main.go
 
 ![功能图](./img/功能图.png)
 
-### 前端页面
+除了题库管理外，系统还支持 **出卷** 和 **试卷管理** 功能。
+
+### 前端页面设计概念图
 
 ![概览](./img/出题系统概览.png)
+
+### 前端实际页面图
+
+![题库管理](./img/题库管理.png)
+
+![试卷管理](./img/试卷管理.png)
 
 ### 后端项目结构
 
@@ -51,7 +59,8 @@ questionSystem/server/
 ├── router/
 │ └── router.go // 负责设置所有 Gin 路由
 ├── service/
-│ └── ai_service.go // 存放与AI服务交互的业务逻辑
+│ ├── ai_service.go // 存放与AI服务交互的业务逻辑
+│ └── export_service.go //存放试卷导出功能的业务逻辑
 ├── store/
 │ └── db.go // 存放所有数据库操作相关的代码
 ├── .env
@@ -228,6 +237,124 @@ questionSystem/server/
 }
 ```
 
+- 创建试卷接口：`POST /api/papers/create`
+
+请求参数示例：
+
+```json
+{
+    "name": "Go语言基础测试",
+    "question_ids": [1, 2, 3]
+}
+```
+
+返回参数：
+
+```json
+{
+    "code": 0,
+    "msg": "试卷创建成功",
+    "data": {
+        "id": 1,
+        "name": "Go语言基础测试",
+        "question_ids": [1, 2, 3]
+    }
+}
+```
+
+- 查询试卷列表接口：`GET /api/papers`
+
+返回参数：
+
+```json
+{
+    "code": 0,
+    "msg": "success",
+    "data": [
+        {
+            "id": 1,
+            "name": "Go语言基础测试",
+            "question_count": 3,
+            "created_at": "2023-10-27T10:00:00Z"
+        }
+    ]
+}
+```
+
+- 查询试卷详情接口：`GET /api/papers/:id`
+
+返回参数：
+
+```json
+{
+    "code": 0,
+    "msg": "success",
+    "data": {
+        "id": 1,
+        "name": "Go语言基础测试",
+        "created_at": "2023-10-27T10:00:00Z",
+        "questions": [
+            {
+                "id": 1,
+                "title": "在Go语言中，以下哪个关键字用于声明一个常量？",
+                "answers": ["A. var", "B. const", "C. let", "D. final"],
+                "right": ["B"],
+                "type_id": 1,
+                "difficulty": 1,
+                "language": "go",
+                "keyword": "常量"
+            }
+        ]
+    }
+}
+```
+
+- 编辑试卷接口：`POST /api/papers/edit`
+
+请求参数示例：
+
+```json
+{
+    "id": 1,
+    "name": "Go语言基础测试-V2",
+    "question_ids": [1, 2, 3, 4]
+}
+```
+
+返回参数：
+
+```json
+{
+    "code": 0,
+    "msg": "试卷更新成功",
+    "data": null
+}
+```
+
+- 删除试卷接口：`POST /api/papers/delete`（逻辑删除）
+
+请求参数示例：
+
+```json
+{
+    "id": 1
+}
+```
+
+返回参数：
+
+```json
+{
+    "code":0,
+    "msg":"试卷删除成功",
+    "data":null
+}
+```
+
+- 导出试卷接口：`GET /api/papers/export/:id`
+
+说明：根据试卷ID导出Word文档格式的试卷。
+
 ### 数据库设计
 
 **题目表：**（questions）
@@ -243,4 +370,14 @@ questionSystem/server/
 |   is_ai    | INTEGER  |  0为手动添加的题目，1为AI生成的题目  |
 |  language  |   TEXT   |            题目的编程语言            |
 |  keyword   |   TEXT   | 该题的关键词（可依靠关键词模糊搜索） |
+|   active   | INTEGER  |    是否被删除，默认为1,被删除为0     |
+
+**试卷表：**（papers）
+
+|   字段名   | 字段类型 |                 说明                 |
+| :--------: | :------: | :----------------------------------: |
+|     id     | INTEGER  |              主键，自增              |
+|    name    |   TEXT   |                 试卷名称               |
+| question_ids |   JSON   |    试卷包含的题目ID列表 (e.g., [1, 2, 3])    |
+| created_at | DATETIME |                 创建时间               |
 |   active   | INTEGER  |    是否被删除，默认为1,被删除为0     |
