@@ -4,6 +4,9 @@ import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from
 import './App.css';
 import LearningPage from './pages/LearningPage';
 import QuestionBankPage from './pages/QuestionBankPage';
+import PaperPreviewPage from './pages/PaperPreviewPage';
+import PaperManagePage from './pages/PaperManagePage';
+import PaperEditPage from './pages/PaperEditPage';
 
 const { Header, Sider, Content } = Layout;
 
@@ -11,7 +14,16 @@ function App() {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const selectedKey = location.pathname.startsWith('/questions') ? '2' : '1';
+  
+  // 根据路径确定选中的菜单项
+  const getSelectedKey = () => {
+    if (location.pathname.startsWith('/questions')) return '2';
+    if (location.pathname.startsWith('/papers')) return '3';
+    if (location.pathname.startsWith('/paper')) return '3'; // 试卷相关页面也归属于试卷管理
+    return '1';
+  };
+  
+  const selectedKey = getSelectedKey();
   
   console.log('当前路径:', location.pathname, '选中菜单:', selectedKey);
 
@@ -28,6 +40,7 @@ function App() {
           items={[
             { key: '1', label: '学习心得', onClick: () => navigate('/') },
             { key: '2', label: '题库管理', onClick: () => navigate('/questions') },
+            { key: '3', label: '试卷管理', onClick: () => navigate('/papers') },
           ]}
         />
       </Sider>
@@ -39,6 +52,9 @@ function App() {
           <Routes>
             <Route path="/" element={<LearningPage />} />
             <Route path="/questions" element={<QuestionBankPage />} />
+            <Route path="/papers" element={<PaperManagePage />} />
+            <Route path="/papers/:id/edit" element={<PaperEditPage />} />
+            <Route path="/paper/preview/:id" element={<PaperPreviewPage />} />
           </Routes>
         </Content>
       </Layout>

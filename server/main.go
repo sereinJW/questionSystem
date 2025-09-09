@@ -26,5 +26,5 @@ func main() {
 
 	r := router.SetupRouter(db)
 
-	r.Run(":8080")
+	r.Run(":8081")
 }

@@ -70,6 +70,32 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 				api.DeleteQuestion(c, db)
 			})
 		}
+
+		// 试卷相关路由
+		papers := apiRoutes.Group("/papers")
+		{
+			papers.POST("", func(c *gin.Context) {
+				api.CreatePaper(c, db)
+			})
+			papers.GET("/:id", func(c *gin.Context) {
+				api.GetPaperDetail(c, db)
+			})
+			papers.GET("/:id/export", func(c *gin.Context) {
+				api.ExportPaper(c, db)
+			})
+			papers.GET("", func(c *gin.Context) {
+				api.GetPapers(c, db)
+			})
+			papers.DELETE("/:id", func(c *gin.Context) {
+				api.DeletePaper(c, db)
+			})
+			papers.PUT("/:id", func(c *gin.Context) {
+				api.EditPaper(c, db)
+			})
+			papers.PUT("/:id/questions", func(c *gin.Context) {
+				api.UpdatePaperQuestions(c, db)
+			})
+		}
 	}
 
 	return r

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Input, Select, Space, Modal, message, Tag, Form, Divider, InputNumber } from 'antd';
+import { Table, Button, Input, Select, Space, Modal, message, Tag, Form, Divider, InputNumber, Card, Progress } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import type { Topic, AskParams } from '../api';
-import { getQuestions, createQuestions, addQuestion, editQuestion, deleteQuestion } from '../api';
+import type { Topic, AskParams, PaperSection, CreatePaperRequest } from '../api';
+import { getQuestions, createQuestions, addQuestion, editQuestion, deleteQuestion, createPaper } from '../api';
+import { useNavigate } from 'react-router-dom';
 import '@ant-design/v5-patch-for-react-19';
 
 const typeOptions = [
@@ -24,6 +25,7 @@ const languageOptions = [
 ];
 
 export default function QuestionBankPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
@@ -45,6 +47,20 @@ export default function QuestionBankPage() {
   const [aiPreviewVisible, setAiPreviewVisible] = useState(false);
   const [aiPreviewData, setAiPreviewData] = useState<Topic[]>([]);
   const [aiPreviewLoading, setAiPreviewLoading] = useState(false);
+
+  // 出卷相关状态
+  const [paperConfigModal, setPaperConfigModal] = useState(false);
+  const [paperConfigForm] = Form.useForm();
+  const [isSelectingMode, setIsSelectingMode] = useState(false);
+  const [paperConfig, setPaperConfig] = useState<{title: string; sections: PaperSection[]}>({
+    title: '',
+    sections: []
+  });
+  const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
+  const [createPaperLoading, setCreatePaperLoading] = useState(false);
+  // 分步选题相关状态
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+  const [sectionQuestions, setSectionQuestions] = useState<{[key: number]: number[]}>({});
   
   // 获取题库数据
   const fetchData = async () => {
@@ -210,10 +226,170 @@ export default function QuestionBankPage() {
   };
 
   // 表格行选择配置
-  const rowSelection = {
+  const rowSelection = isSelectingMode ? undefined : {
     selectedRowKeys,
     onChange: (newSelectedRowKeys: React.Key[]) => {
       setSelectedRowKeys(newSelectedRowKeys);
+    },
+  };
+
+
+
+
+
+  // 检查是否所有题型都选择完毕
+  const isSelectionComplete = (): boolean => {
+    for (let i = 0; i < paperConfig.sections.length; i++) {
+      const section = paperConfig.sections[i];
+      const sectionQuestionIds = sectionQuestions[i] || [];
+      if (sectionQuestionIds.length !== section.count) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  // 获取选题进度信息
+  const getSelectionProgress = () => {
+    return paperConfig.sections.map((section, index) => {
+      const sectionQuestionIds = sectionQuestions[index] || [];
+      const selected = sectionQuestionIds.length;
+      const required = section.count;
+
+      return {
+        typeName: section.name,
+        selected,
+        required,
+        percentage: required > 0 ? Math.round((selected / required) * 100) : 0
+      };
+    });
+  };
+
+  // 获取当前大题类型的题目
+  const getFilteredQuestions = () => {
+    if (!isSelectingMode || paperConfig.sections.length === 0) return filtered;
+    const currentSection = paperConfig.sections[currentSectionIndex];
+    return filtered.filter(q => q.type_id === currentSection.type);
+  };
+
+  // 切换大题
+  const handleSectionChange = (sectionIndex: number) => {
+    setCurrentSectionIndex(sectionIndex);
+  };
+
+  // 处理分步题目选择
+  const handleStepQuestionSelect = (questionId: number, checked: boolean) => {
+    const currentSectionQuestionIds = sectionQuestions[currentSectionIndex] || [];
+    const currentSection = paperConfig.sections[currentSectionIndex];
+    
+    if (checked) {
+      if (currentSectionQuestionIds.length >= currentSection.count) {
+        message.warning(`${currentSection.name} 最多只能选择 ${currentSection.count} 道题`);
+        return;
+      }
+      const newSectionQuestions = [...currentSectionQuestionIds, questionId];
+      setSectionQuestions({
+        ...sectionQuestions,
+        [currentSectionIndex]: newSectionQuestions
+      });
+    } else {
+      const newSectionQuestions = currentSectionQuestionIds.filter(id => id !== questionId);
+      setSectionQuestions({
+        ...sectionQuestions,
+        [currentSectionIndex]: newSectionQuestions
+      });
+    }
+  };
+
+  // 开始出卷配置
+  const handleStartPaperConfig = () => {
+    setPaperConfigModal(true);
+    paperConfigForm.resetFields();
+  };
+
+  // 确认出卷配置，进入选题模式
+  const handlePaperConfigOk = async () => {
+    try {
+      const values = await paperConfigForm.validateFields();
+      
+      // 构建配置数据
+      const config = {
+        title: values.title,
+        sections: values.sections.map((section: any) => ({
+          name: section.name,
+          type: section.type,
+          count: section.count,
+          score_each: section.score_each
+        }))
+      };
+
+      setPaperConfig(config);
+      setSelectedQuestions([]);
+      setSectionQuestions({});
+      setCurrentSectionIndex(0);
+      setIsSelectingMode(true);
+      setPaperConfigModal(false);
+      
+      message.success('配置完成，请按题型分步选择题目');
+    } catch (e) {
+      console.error('表单验证失败:', e);
+    }
+  };
+
+  // 取消出卷
+  const handleCancelPaper = () => {
+    Modal.confirm({
+      title: '确认取消出卷？',
+      content: '取消后将丢失当前的选题进度',
+      okText: '确认取消',
+      cancelText: '继续出卷',
+      onOk: () => {
+        setIsSelectingMode(false);
+        setPaperConfig({ title: '', sections: [] });
+        setSelectedQuestions([]);
+        setSectionQuestions({});
+        setCurrentSectionIndex(0);
+        setSelectedRowKeys([]);
+      },
+    });
+  };
+
+  // 生成试卷预览
+  const handleGeneratePaper = async () => {
+    if (!isSelectionComplete()) {
+      message.error('请完成所有题型的题目选择');
+      return;
+    }
+
+    // 合并所有大题的题目ID
+    const allQuestionIds: number[] = [];
+    paperConfig.sections.forEach((_, index) => {
+      const sectionQuestionIds = sectionQuestions[index] || [];
+      allQuestionIds.push(...sectionQuestionIds);
+    });
+
+    try {
+      setCreatePaperLoading(true);
+      
+      const request: CreatePaperRequest = {
+        title: paperConfig.title,
+        sections: paperConfig.sections,
+        question_ids: allQuestionIds
+      };
+
+      const res = await createPaper(request);
+      if (res.code === 0 && res.data) {
+        message.success('试卷创建成功');
+        // 跳转到试卷预览页面
+        navigate(`/paper/preview/${res.data.id}`);
+      } else {
+        message.error(res.msg || '创建试卷失败');
+      }
+    } catch (e) {
+      message.error('创建试卷出错');
+      console.error('创建试卷出错:', e);
+    } finally {
+      setCreatePaperLoading(false);
     }
   };
 
@@ -377,6 +553,26 @@ export default function QuestionBankPage() {
 
   // 表格列
   const columns: ColumnsType<Topic> = [
+    ...(isSelectingMode ? [{
+      title: '选择',
+      key: 'select',
+      width: 60,
+      render: (_: any, record: Topic) => {
+        const currentSectionQuestionIds = sectionQuestions[currentSectionIndex] || [];
+        const currentSection = paperConfig.sections[currentSectionIndex];
+        const isChecked = currentSectionQuestionIds.includes(record.id!);
+        const isDisabled = !isChecked && currentSectionQuestionIds.length >= currentSection.count;
+        
+        return (
+          <input
+            type="checkbox"
+            checked={isChecked}
+            disabled={isDisabled}
+            onChange={(e) => handleStepQuestionSelect(record.id!, e.target.checked)}
+          />
+        );
+      }
+    }] : []),
     { 
       title: '题干', 
       dataIndex: 'title', 
@@ -414,8 +610,12 @@ export default function QuestionBankPage() {
       width: 150,
       render: (_, record) => (
         <Space>
-          <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
-          <Button type="link" size="small" danger onClick={() => handleDelete(record)}>删除</Button>
+          {!isSelectingMode && (
+            <>
+              <Button type="link" size="small" onClick={() => handleEdit(record)}>编辑</Button>
+              <Button type="link" size="small" danger onClick={() => handleDelete(record)}>删除</Button>
+            </>
+          )}
         </Space>
       ),
     },
@@ -498,6 +698,112 @@ export default function QuestionBankPage() {
 
   return (
     <div>
+      {/* 选题模式状态栏 */}
+      {isSelectingMode && (
+        <>
+          {/* 总体进度 */}
+          <Card style={{ marginBottom: 16, backgroundColor: '#f6ffed', borderColor: '#b7eb8f' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h4 style={{ margin: 0, color: '#52c41a' }}>正在为试卷《{paperConfig.title}》选择题目</h4>
+              <Space>
+                <Button 
+                  type="primary" 
+                  disabled={!isSelectionComplete()}
+                  loading={createPaperLoading}
+                  onClick={handleGeneratePaper}
+                >
+                  生成试卷预览
+                </Button>
+                <Button onClick={handleCancelPaper}>取消出卷</Button>
+              </Space>
+            </div>
+            
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: 16 }}>
+              {getSelectionProgress().map((progress, index) => (
+                <div key={index} style={{ minWidth: '200px' }}>
+                  <div style={{ marginBottom: 4 }}>
+                    {progress.typeName}：{progress.selected}/{progress.required} 题
+                  </div>
+                  <Progress 
+                    percent={progress.percentage} 
+                    size="small"
+                    status={progress.percentage === 100 ? 'success' : 'active'}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* 大题切换 */}
+            <div style={{ textAlign: 'center' }}>
+              <Space wrap>
+                {paperConfig.sections.map((section, index) => {
+                  const sectionQuestionIds = sectionQuestions[index] || [];
+                  const isComplete = sectionQuestionIds.length === section.count;
+                  const isCurrent = index === currentSectionIndex;
+                  return (
+                    <Tag 
+                      key={index} 
+                      color={isComplete ? 'green' : isCurrent ? 'blue' : 'default'}
+                      style={{ 
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                        fontSize: '14px'
+                      }}
+                      onClick={() => handleSectionChange(index)}
+                    >
+                      {section.name}: {sectionQuestionIds.length}/{section.count}
+                      {isComplete && ' ✓'}
+                    </Tag>
+                  );
+                })}
+              </Space>
+            </div>
+          </Card>
+
+          {/* 当前大题选择提示 */}
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h4 style={{ margin: 0, color: '#1890ff' }}>
+                  当前选择：{paperConfig.sections[currentSectionIndex]?.name}
+                </h4>
+                <div style={{ marginTop: 8 }}>
+                  <Tag color="blue">
+                    题型：{typeOptions.find(t => t.value === paperConfig.sections[currentSectionIndex]?.type)?.label}
+                  </Tag>
+                  <Tag color="green">
+                    每题分数：{paperConfig.sections[currentSectionIndex]?.score_each} 分
+                  </Tag>
+                  <Tag color="orange">
+                    需要选择：{paperConfig.sections[currentSectionIndex]?.count} 道题
+                  </Tag>
+                  <Tag color="purple">
+                    已选择：{(sectionQuestions[currentSectionIndex] || []).length} 道题
+                  </Tag>
+                </div>
+              </div>
+              <Space>
+                <Button 
+                  size="small"
+                  disabled={currentSectionIndex === 0}
+                  onClick={() => handleSectionChange(currentSectionIndex - 1)}
+                >
+                  上一题型
+                </Button>
+                <Button 
+                  size="small"
+                  disabled={currentSectionIndex === paperConfig.sections.length - 1}
+                  onClick={() => handleSectionChange(currentSectionIndex + 1)}
+                >
+                  下一题型
+                </Button>
+              </Space>
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* 操作栏 */}
       <Space style={{ marginBottom: 16 }}>
         <Input.Search 
           placeholder="搜索题干/关键词" 
@@ -512,35 +818,151 @@ export default function QuestionBankPage() {
           options={typeOptions}
           onChange={setType}
         />
-        <Button type="primary" onClick={() => setAiModal(true)}>AI出题</Button>
-        <Button onClick={() => setAddModal(true)}>手工出题</Button>
-        <Button onClick={fetchData}>刷新</Button>
-        <Button 
-          danger 
-          disabled={selectedRowKeys.length === 0}
-          loading={batchDeleteLoading}
-          onClick={handleBatchDelete}
-        >
-          批量删除({selectedRowKeys.length})
-        </Button>
+        
+        {!isSelectingMode ? (
+          <>
+            <Button type="primary" onClick={handleStartPaperConfig}>智能出卷</Button>
+            <Button type="primary" onClick={() => setAiModal(true)}>AI出题</Button>
+            <Button onClick={() => setAddModal(true)}>手工出题</Button>
+            <Button onClick={fetchData}>刷新</Button>
+            <Button 
+              danger 
+              disabled={selectedRowKeys.length === 0}
+              loading={batchDeleteLoading}
+              onClick={handleBatchDelete}
+            >
+              批量删除({selectedRowKeys.length})
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={fetchData}>刷新</Button>
+            <span style={{ color: '#666' }}>
+              已选择 {selectedQuestions.length} 道题
+            </span>
+          </>
+        )}
       </Space>
       
       <Table
         rowSelection={rowSelection}
         columns={columns}
-        dataSource={filtered}
+        dataSource={getFilteredQuestions()}
         rowKey={(record: Topic) => record.id ? String(record.id) : ''}
         loading={loading}
         pagination={{
           current: page,
           pageSize,
-          total: filtered.length,
+          total: getFilteredQuestions().length,
           onChange: setPage,
           onShowSizeChange: (_: number, size: number) => setPageSize(size),
           showSizeChanger: true,
-          showTotal: (total: number) => `共 ${total} 道题`,
+          showTotal: (total: number) => isSelectingMode ? 
+            `共 ${total} 道${typeOptions.find(t => t.value === paperConfig.sections[currentSectionIndex]?.type)?.label || '题目'}` :
+            `共 ${total} 道题`,
         }}
       />
+
+      {/* 出卷配置弹窗 */}
+      <Modal
+        open={paperConfigModal}
+        title="智能出卷配置"
+        onCancel={() => setPaperConfigModal(false)}
+        onOk={handlePaperConfigOk}
+        destroyOnClose
+        width={800}
+      >
+        <Form
+          form={paperConfigForm}
+          layout="vertical"
+          initialValues={{
+            sections: [{ name: '一、单选题', type: 1, count: 10, score_each: 2 }]
+          }}
+        >
+          <Form.Item 
+            name="title" 
+            label="试卷标题" 
+            rules={[{ required: true, message: '请输入试卷标题' }]}
+          >
+            <Input placeholder="请输入试卷标题，如：Go语言基础知识测试" />
+          </Form.Item>
+
+          <Form.List name="sections">
+            {(fields, { add, remove }) => (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h4>大题配置</h4>
+                  <Button type="dashed" onClick={() => add()}>
+                    添加大题
+                  </Button>
+                </div>
+                
+                {fields.map(({ key, name, ...restField }) => (
+                  <Card key={key} size="small" style={{ marginBottom: 16 }}>
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'end' }}>
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'name']}
+                        label="大题名称"
+                        rules={[{ required: true, message: '请输入大题名称' }]}
+                        style={{ flex: 1 }}
+                      >
+                        <Input placeholder="如：一、单选题" />
+                      </Form.Item>
+                      
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'type']}
+                        label="题目类型"
+                        rules={[{ required: true, message: '请选择题目类型' }]}
+                        style={{ width: 120 }}
+                      >
+                        <Select options={typeOptions} placeholder="题型" />
+                      </Form.Item>
+                      
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'count']}
+                        label="题目数量"
+                        rules={[{ required: true, message: '请输入题目数量' }]}
+                        style={{ width: 100 }}
+                      >
+                        <InputNumber min={1} max={50} placeholder="数量" />
+                      </Form.Item>
+                      
+                      <Form.Item
+                        {...restField}
+                        name={[name, 'score_each']}
+                        label="每题分数"
+                        rules={[{ required: true, message: '请输入每题分数' }]}
+                        style={{ width: 100 }}
+                      >
+                        <InputNumber min={1} max={20} placeholder="分数" />
+                      </Form.Item>
+                      
+                      {fields.length > 1 && (
+                        <Button 
+                          type="text" 
+                          danger 
+                          onClick={() => remove(name)}
+                          style={{ marginBottom: 24 }}
+                        >
+                          删除
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </>
+            )}
+          </Form.List>
+
+          <Divider />
+          <p style={{ color: '#999' }}>
+            配置完成后，系统将进入选题模式，您可以从题库中选择相应的题目来组成试卷。
+          </p>
+        </Form>
+      </Modal>
       
       {/* 编辑题目弹窗 */}
       <Modal
