@@ -54,7 +54,7 @@ export default function PaperPreviewPage() {
     try {
       // 创建下载链接
       const downloadUrl = `/api/papers/${paperDetail.paper.id}/export?format=${format}`;
-      
+
       // 创建隐藏的链接元素并触发下载
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -62,7 +62,7 @@ export default function PaperPreviewPage() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       message.success(`${format.toUpperCase()} 文件导出成功`);
     } catch (e) {
       message.error('导出失败');
@@ -75,14 +75,14 @@ export default function PaperPreviewPage() {
   // 按题型分组题目
   const getQuestionsBySection = () => {
     if (!paperDetail) return [];
-    
+
     const sections: Array<{
       config: any;
       questions: typeof paperDetail.questions;
     }> = [];
 
     let questionIndex = 0;
-    
+
     for (const sectionConfig of paperDetail.paper.config) {
       const sectionQuestions = paperDetail.questions.slice(questionIndex, questionIndex + sectionConfig.count);
       sections.push({
@@ -91,7 +91,7 @@ export default function PaperPreviewPage() {
       });
       questionIndex += sectionConfig.count;
     }
-    
+
     return sections;
   };
 
@@ -103,15 +103,7 @@ export default function PaperPreviewPage() {
     }, 0);
   };
 
-  // 格式化创建时间
-  const formatDate = (dateString: string) => {
-    try {
-      return new Date(dateString).toLocaleString('zh-CN');
-    } catch {
-      return dateString;
-    }
-  };
-
+  
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '100px 0' }}>
@@ -136,8 +128,8 @@ export default function PaperPreviewPage() {
       {/* 页面头部 */}
       <div style={{ marginBottom: 24 }}>
         <Space>
-          <Button 
-            icon={<ArrowLeftOutlined />} 
+          <Button
+            icon={<ArrowLeftOutlined />}
             onClick={() => {
               // 根据来源页面决定返回位置
               const from = location.state?.from;
@@ -150,10 +142,10 @@ export default function PaperPreviewPage() {
           >
             {location.state?.from === 'papers' ? '返回试卷管理' : '返回题库'}
           </Button>
-          
+
           <Divider type="vertical" />
-          
-          <Button 
+
+          <Button
             type="primary"
             icon={<FileTextOutlined />}
             loading={exportLoading === 'docx'}
@@ -172,27 +164,17 @@ export default function PaperPreviewPage() {
               {paperDetail.paper.title}
             </Title>
           </Col>
-          
-          <Col span={12}>
-            <Text strong>试卷ID：</Text>
-            <Text>{paperDetail.paper.id}</Text>
-          </Col>
-          
-          <Col span={12}>
-            <Text strong>创建时间：</Text>
-            <Text>{formatDate(paperDetail.paper.created_at)}</Text>
-          </Col>
-          
+
           <Col span={12}>
             <Text strong>总题数：</Text>
             <Text>{paperDetail.questions.length} 题</Text>
           </Col>
-          
+
           <Col span={12}>
             <Text strong>总分：</Text>
             <Text>{totalScore} 分</Text>
           </Col>
-          
+
           <Col span={24}>
             <Text strong>题型分布：</Text>
             <Space wrap>
@@ -225,7 +207,7 @@ export default function PaperPreviewPage() {
               {/* 题目列表 */}
               {section.questions.map((questionItem, questionIndex) => {
                 const { topic } = questionItem;
-                const questionNumber = sectionIndex === 0 ? questionIndex + 1 : 
+                const questionNumber = sectionIndex === 0 ? questionIndex + 1 :
                   sections.slice(0, sectionIndex).reduce((sum, s) => sum + s.questions.length, 0) + questionIndex + 1;
 
                 return (

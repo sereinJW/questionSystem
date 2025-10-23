@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, message, Popconfirm, Tag } from 'antd';
-import { EditOutlined, DeleteOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons';
+import { EditOutlined, DeleteOutlined, DownloadOutlined, EyeOutlined, ThunderboltOutlined, FileTextOutlined } from '@ant-design/icons';
 import { getPapers, deletePaper, type Paper } from '../api';
 import { useNavigate } from 'react-router-dom';
+import AIGeneratePaperModal from '../components/AIGeneratePaperModal';
+import ManualPaperModal from '../components/ManualPaperModal';
 
 const PaperManagePage: React.FC = () => {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [loading, setLoading] = useState(false);
+  const [aiModalVisible, setAiModalVisible] = useState(false);
+  const [manualModalVisible, setManualModalVisible] = useState(false);
 
   const navigate = useNavigate();
 
@@ -63,6 +67,26 @@ const PaperManagePage: React.FC = () => {
   // 预览试卷
   const handlePreview = (paperId: number) => {
     navigate(`/paper/preview/${paperId}`, { state: { from: 'papers' } });
+  };
+
+  // AI生成成功后的回调
+  const handleAIGenerateSuccess = (paperId: number) => {
+    setAiModalVisible(false);
+    loadPapers(); // 刷新列表
+    message.success('试卷生成成功，正在跳转预览...');
+    setTimeout(() => {
+      navigate(`/paper/preview/${paperId}`, { state: { from: 'papers' } });
+    }, 500);
+  };
+
+  // 手动出卷成功后的回调
+  const handleManualGenerateSuccess = (paperId: number) => {
+    setManualModalVisible(false);
+    loadPapers(); // 刷新列表
+    message.success('试卷创建成功，正在跳转预览...');
+    setTimeout(() => {
+      navigate(`/paper/preview/${paperId}`, { state: { from: 'papers' } });
+    }, 500);
   };
 
 
@@ -178,9 +202,26 @@ const PaperManagePage: React.FC = () => {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2>试卷管理</h2>
-        <Button type="primary" onClick={loadPapers}>
-          刷新列表
-        </Button>
+        <Space>
+          <Button 
+            type="primary" 
+            icon={<FileTextOutlined />}
+            onClick={() => setManualModalVisible(true)}
+          >
+            手动出卷
+          </Button>
+          <Button 
+            type="primary" 
+            icon={<ThunderboltOutlined />}
+            onClick={() => setAiModalVisible(true)}
+            style={{ background: '#722ed1', borderColor: '#722ed1' }}
+          >
+            AI智能组卷
+          </Button>
+          <Button onClick={loadPapers}>
+            刷新列表
+          </Button>
+        </Space>
       </div>
 
       <Table
@@ -198,7 +239,17 @@ const PaperManagePage: React.FC = () => {
         scroll={{ x: 1200 }}
       />
 
+      <ManualPaperModal
+        visible={manualModalVisible}
+        onCancel={() => setManualModalVisible(false)}
+        onSuccess={handleManualGenerateSuccess}
+      />
 
+      <AIGeneratePaperModal
+        visible={aiModalVisible}
+        onCancel={() => setAiModalVisible(false)}
+        onSuccess={handleAIGenerateSuccess}
+      />
     </div>
   );
 };

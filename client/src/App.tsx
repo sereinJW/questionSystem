@@ -2,7 +2,6 @@ import { Layout, Menu } from 'antd';
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
-import LearningPage from './pages/LearningPage';
 import QuestionBankPage from './pages/QuestionBankPage';
 import PaperPreviewPage from './pages/PaperPreviewPage';
 import PaperManagePage from './pages/PaperManagePage';
@@ -17,9 +16,9 @@ function App() {
   
   // 根据路径确定选中的菜单项
   const getSelectedKey = () => {
-    if (location.pathname.startsWith('/questions')) return '2';
-    if (location.pathname.startsWith('/papers')) return '3';
-    if (location.pathname.startsWith('/paper')) return '3'; // 试卷相关页面也归属于试卷管理
+    if (location.pathname.startsWith('/questions')) return '1';
+    if (location.pathname.startsWith('/papers')) return '2';
+    if (location.pathname.startsWith('/paper')) return '2'; // 试卷相关页面也归属于试卷管理
     return '1';
   };
   
@@ -38,9 +37,8 @@ function App() {
           mode="inline"
           selectedKeys={[selectedKey]}
           items={[
-            { key: '1', label: '学习心得', onClick: () => navigate('/') },
-            { key: '2', label: '题库管理', onClick: () => navigate('/questions') },
-            { key: '3', label: '试卷管理', onClick: () => navigate('/papers') },
+            { key: '1', label: '题库管理', onClick: () => navigate('/questions') },
+            { key: '2', label: '试卷管理', onClick: () => navigate('/papers') },
           ]}
         />
       </Sider>
@@ -50,7 +48,7 @@ function App() {
         </Header>
         <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', minHeight: 280 }}>
           <Routes>
-            <Route path="/" element={<LearningPage />} />
+            <Route path="/" element={<QuestionBankPage />} />
             <Route path="/questions" element={<QuestionBankPage />} />
             <Route path="/papers" element={<PaperManagePage />} />
             <Route path="/papers/:id/edit" element={<PaperEditPage />} />

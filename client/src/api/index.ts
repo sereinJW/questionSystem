@@ -213,4 +213,34 @@ export const updatePaperQuestions = async (paperId: number, title: string, quest
     console.error('更新试卷题目失败:', error);
     return { code: -999, msg: '网络错误', data: null };
   }
+};
+
+// AI生成试卷的大题配置
+export interface AIGeneratePaperSection {
+  name: string;        // 大题名称
+  type: number;        // 题型
+  count: number;       // 数量
+  score_each: number;  // 每题分数
+  difficulty: number;  // 难度
+  language: string;    // 语言
+  keyword: string;     // 关键词
+}
+
+// AI生成试卷请求
+export interface AIGeneratePaperRequest {
+  title: string;                      // 试卷标题
+  sections: AIGeneratePaperSection[]; // 大题配置
+}
+
+// AI生成试卷
+export const aiGeneratePaper = async (request: AIGeneratePaperRequest): Promise<ApiResponse<Paper | null>> => {
+  try {
+    console.log('发起AI生成试卷请求, 数据:', request);
+    const response = await axios.post('/api/papers/ai-generate', request);
+    console.log('AI生成试卷响应:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('AI生成试卷失败:', error);
+    return { code: -999, msg: '网络错误', data: null };
+  }
 }; 

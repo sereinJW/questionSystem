@@ -50,26 +50,62 @@ go run main.go
 ### 后端项目结构
 
 ```
-questionSystem/server/
-├── api/
-│ └── handler.go // 存放所有API的处理器函数 (handlers)
-│ └── middleware.go // 存放错误处理等中间件
-├── config/
-│ └── config.go // 负责读取和管理配置 (例如 .env 文件)
-├── model/
-│ └── model.go // 存放所有的数据结构定义 (structs)
-├── router/
-│ └── router.go // 负责设置所有 Gin 路由
-├── service/
-│ ├── ai_service.go // 存放与AI服务交互的业务逻辑
-│ └── export_service.go //存放试卷导出功能的业务逻辑
-├── store/
-│ └── db.go // 存放所有数据库操作相关的代码
-├── .env
-├── go.mod
-├── go.sum
-├── main.go // 主入口文件，负责初始化和启动服务
-└── questionSystem.db
+questionSystem/
+├── client/                              // 前端项目
+│   ├── dist/                           // 构建输出目录
+│   ├── node_modules/                   // 前端依赖
+│   ├── public/                         // 静态资源
+│   │   └── vite.svg
+│   ├── src/                            // 前端源代码
+│   │   ├── api/                        // API 请求封装
+│   │   ├── assets/                     // 资源文件
+│   │   ├── components/                 // React 组件
+│   │   │   └── AIGeneratePaperModal.tsx
+│   │   ├── pages/                      // 页面组件
+│   │   ├── App.css
+│   │   ├── App.tsx                     // 主应用组件
+│   │   ├── index.css
+│   │   ├── main.tsx                    // 入口文件
+│   │   └── vite-env.d.ts
+│   ├── .gitignore
+│   ├── eslint.config.js
+│   ├── index.html
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── README.md
+│   ├── tsconfig.app.json
+│   ├── tsconfig.json
+│   ├── tsconfig.node.json
+│   └── vite.config.ts
+│
+├── server/                              // 后端项目
+│   ├── api/
+│   │   ├── handler.go                  // 存放所有API的处理器函数 (handlers)
+│   │   └── middleware.go               // 存放错误处理等中间件
+│   ├── config/
+│   │   └── config.go                   // 负责读取和管理配置 (例如 .env 文件)
+│   ├── model/
+│   │   └── model.go                    // 存放所有的数据结构定义 (structs)
+│   ├── router/
+│   │   └── router.go                   // 负责设置所有 Gin 路由
+│   ├── service/
+│   │   ├── ai_paper_service.go         // 存放AI生成试卷的业务逻辑
+│   │   ├── ai_service.go               // 存放与AI服务交互的业务逻辑
+│   │   └── export_service.go           // 存放试卷导出功能的业务逻辑
+│   ├── store/
+│   │   └── db.go                       // 存放所有数据库操作相关的代码
+│   ├── .env                            // 环境变量配置文件
+│   ├── .gitignore
+│   ├── go.mod                          // Go 模块依赖管理
+│   ├── go.sum                          // Go 依赖校验文件
+│   ├── main.go                         // 主入口文件，负责初始化和启动服务
+│   ├── questionSystem                  // 编译后的可执行文件
+│   └── questionSystem.db               // SQLite 数据库文件
+│
+├── img/                                 // 项目截图和文档图片
+│
+├──  AI组卷功能说明.md
+└──  readme.md                            // 项目说明文档
 ```
 
 ### 后端接口
@@ -357,6 +393,51 @@ questionSystem/server/
 
 说明：根据试卷ID导出Word文档格式的试卷。
 
+- AI组卷接口：`POST /api/papers/ai-generate`
+
+请求参数示例：
+
+```json
+{
+  "title": "Go语言期末考试试卷",
+  "sections": [
+    {
+      "name": "一、单选题",
+      "type": 1,
+      "count": 10,
+      "score_each": 2,
+      "difficulty": 1,
+      "language": "go",
+      "keyword": "Go语言基础"
+    },
+    {
+      "name": "二、多选题",
+      "type": 2,
+      "count": 5,
+      "score_each": 4,
+      "difficulty": 2,
+      "language": "go",
+      "keyword": "Go并发编程"
+    }
+  ]
+}
+```
+
+返回参数：
+
+```json
+{
+  "code": 0,
+  "msg": "AI生成试卷成功",
+  "data": {
+    "id": 1,
+    "title": "Go语言期末考试试卷",
+    "config": [...],
+    "created_at": "2025-10-21T10:30:00Z"
+  }
+}
+```
+
 ### 数据库设计
 
 **题目表：**（questions）
@@ -383,3 +464,8 @@ questionSystem/server/
 | question_ids |   JSON   |    试卷包含的题目ID列表 (e.g., [1, 2, 3])    |
 | created_at | DATETIME |                 创建时间               |
 |   active   | INTEGER  |    是否被删除，默认为1,被删除为0     |
+
+## AI组卷功能说明
+
+[AI组卷功能说明]: ./AI组卷功能说明.md
+

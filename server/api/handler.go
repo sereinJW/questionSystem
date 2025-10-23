@@ -680,3 +680,46 @@ func UpdatePaperQuestions(c *gin.Context, db *sql.DB) {
 		Data: nil,
 	})
 }
+
+// AI生成试卷
+func AIGeneratePaper(c *gin.Context, db *sql.DB) {
+	var request service.AIGeneratePaperRequest
+
+	// 接受并验证JSON
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(400, model.Response{
+			Code: -1,
+			Msg:  fmt.Sprintf("请求参数错误: %s", err.Error()),
+			Data: nil,
+		})
+		return
+	}
+
+	// 获取AI配置
+	ai, err := config.Envinit()
+	if err != nil {
+		c.JSON(500, model.Response{
+			Code: -101,
+			Msg:  ".env 读取失败",
+			Data: nil,
+		})
+		return
+	}
+
+	// 调用AI生成试卷服务
+	paper, err := service.QuickAIGeneratePaper(db, ai, request)
+	if err != nil {
+		c.JSON(500, model.Response{
+			Code: -1,
+			Msg:  fmt.Sprintf("AI生成试卷失败: %s", err.Error()),
+			Data: nil,
+		})
+		return
+	}
+
+	c.JSON(200, model.Response{
+		Code: 0,
+		Msg:  "AI生成试卷成功",
+		Data: paper,
+	})
+}

@@ -77,6 +77,9 @@ func SetupRouter(db *sql.DB) *gin.Engine {
 			papers.POST("", func(c *gin.Context) {
 				api.CreatePaper(c, db)
 			})
+			papers.POST("/ai-generate", func(c *gin.Context) {
+				api.AIGeneratePaper(c, db)
+			})
 			papers.GET("/:id", func(c *gin.Context) {
 				api.GetPaperDetail(c, db)
 			})
