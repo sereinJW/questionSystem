@@ -259,7 +259,7 @@ export default function PaperPreviewPage() {
       <div style={{ textAlign: 'center', padding: '40px 0 20px', color: '#999' }}>
         <Divider />
         <Text type="secondary">
-          本试卷由考试出题系统自动生成 | 武汉科技大学 徐伽炜
+          本试卷由考试出题系统自动生成
         </Text>
       </div>
     </div>

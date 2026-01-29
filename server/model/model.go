@@ -11,16 +11,16 @@ type Ask struct { //omitempty 允许客户端不传该字段,default=xxx 为零�
 
 // 题目
 type Topic struct {
-	Id         int      `json:"id"`                                                                //题目ID
-	Title      string   `json:"title" validate:"required"`                                         //题干
-	Answers    []string `json:"answers"`                                                           //选项
-	Right      []string `json:"right"`                                                             //正确的选项
-	Typeid     int      `json:"type_id" validate:"required"`                                       //题目类型
-	Difficulty int      `json:"difficulty" validate:"required"`                                    //题目难度
-	Isai       int      `json:"is_ai"`                                                             //ai还是手工
-	Language   string   `json:"language" validate:"omitempty,oneof=go javascript java python c++"` //编译语言
-	Keyword    string   `json:"keyword" validate:"required"`                                       //关键词
-	Active     int      `json:"active"`                                                            //是否被删除
+	Id         int      `json:"id"`
+	Title      string   `json:"title" validate:"required"`
+	Answers    []string `json:"answers"`
+	Right      []string `json:"right"`
+	Typeid     int      `json:"type_id" validate:"required"`
+	Difficulty int      `json:"difficulty" validate:"required"`
+	Isai       int      `json:"is_ai"`
+	Language   string   `json:"language" validate:"omitempty,oneof=go javascript java python c++"`
+	Keyword    string   `json:"keyword" validate:"required"`
+	Active     int      `json:"active"`
 }
 
 // ai模型配置
