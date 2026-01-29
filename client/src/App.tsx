@@ -44,7 +44,7 @@ function App() {
       </Sider>
       <Layout>
         <Header style={{ background: '#001529', color: '#fff', fontSize: 20, fontWeight: 'bold', paddingLeft: 24 }}>
-          考试出题系统
+          武汉科技大学 徐伽炜 考试出题系统
         </Header>
         <Content style={{ margin: '24px 16px', padding: 24, background: '#fff', minHeight: 280 }}>
           <Routes>
